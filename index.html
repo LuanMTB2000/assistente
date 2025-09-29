@@ -492,7 +492,7 @@
     <script>
         // Variáveis globais
         let config = {
-            apiKey: 'patCY3Zj2IpIo8eqV.20f046ab1ff9c3feec69bc1e95c8fbea06e058a42f4d0b9bc9eb94a9e8c8f26d',
+            apiKey: 'patYdZvf88uDFePu3.6604ef7190867cc01e106db219ab28bad69f5395e00d03d3d1c72f9665ae92f1',
             baseId: 'app3ycinowEosnnnq',
             tableName: 'Controle Geral',
             connected: false
@@ -556,10 +556,12 @@
                 console.log('Tabela:', tableName);
                 
                 const response = await fetch(url, {
+                    method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    mode: 'cors'
                 });
                 
                 console.log('Status da resposta:', response.status);
@@ -645,20 +647,22 @@
                             
                             <ol style="margin-left: 20px;">
                                 <li><strong>Acesse:</strong> <a href="https://airtable.com/create/tokens" target="_blank">airtable.com/create/tokens</a></li>
-                                <li><strong>Delete o token antigo</strong> chamado "Assistente IA"</li>
-                                <li><strong>Crie um NOVO token</strong> com essas configurações:
+                                <li><strong>Crie um token COMPLETAMENTE NOVO</strong> (não edite o antigo):
                                     <ul style="margin: 10px 0 10px 20px;">
-                                        <li>✅ Nome: "Pesquisa Web"</li>
-                                        <li>✅ Escopo: <strong>data.records:read</strong></li>
-                                        <li>✅ Acesso: Selecione a base <strong>"Gestão de Contratos"</strong></li>
+                                        <li>✅ Nome: <strong>"PesquisaWeb2024"</strong> (nome diferente do anterior)</li>
+                                        <li>✅ Escopo: <strong>data.records:read</strong> (apenas esse)</li>
+                                        <li>✅ Acesso: Clique em <strong>"Add a base"</strong> e selecione <strong>"Gestão de Contratos"</strong></li>
+                                        <li>⚠️ NÃO marque "All current and future bases"</li>
                                     </ul>
                                 </li>
+                                <li><strong>Clique em "Create token"</strong></li>
                                 <li><strong>Copie o novo token</strong> (começa com "pat...")</li>
-                                <li><strong>Cole abaixo</strong> e clique em "Conectar"</li>
+                                <li><strong>COLE ABAIXO no campo "Personal Access Token"</strong></li>
+                                <li><strong>Clique em "Conectar ao Airtable"</strong></li>
                             </ol>
                             
-                            <p style="margin-top: 15px; padding: 10px; background: #f8d7da; border-radius: 5px;">
-                                <strong>⚠️ IMPORTANTE:</strong> O token atual NÃO tem permissão para ler a base "Gestão de Contratos"!
+                            <p style="margin-top: 15px; padding: 10px; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 5px; color: #0c5460;">
+                                <strong>💡 DICA:</strong> Após criar o token, aguarde 10-15 segundos antes de clicar em conectar. O Airtable precisa processar as permissões.
                             </p>
                         </div>
                     </div>
