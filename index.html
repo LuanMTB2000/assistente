@@ -450,14 +450,14 @@
         
         <div class="search-section" id="searchSection">
             <div style="background: #d4edda; border: 2px solid #28a745; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
-                <h3 style="color: #155724; margin-bottom: 10px;">🟢 Conexão Automática Ativada</h3>
+                <h3 style="color: #155724; margin-bottom: 10px;">🔄 Tentando Conectar...</h3>
                 <p style="color: #155724; font-size: 14px;">
-                    Conectando automaticamente à tabela <strong>"Controle Geral"</strong>...<br>
-                    Base: app3ycinowEosnnnq
+                    <strong>Base:</strong> Gestão de Contratos (app3ycinowEosnnnq)<br>
+                    <strong>Tabela:</strong> Controle Geral
                 </p>
                 <div id="loadingIndicator" style="margin-top: 15px;">
                     <div class="spinner"></div>
-                    <p style="color: #155724;">Aguarde enquanto carregamos seus dados...</p>
+                    <p style="color: #155724; font-size: 13px;">Verificando permissões e carregando dados...</p>
                 </div>
             </div>
             
@@ -504,8 +504,11 @@
         
         // Auto-conectar ao carregar a página
         window.addEventListener('load', () => {
-            console.log('Iniciando conexão automática...');
-            setTimeout(autoConnect, 500);
+            console.log('🔄 Iniciando conexão automática...');
+            console.log('📊 Base: Gestão de Contratos');
+            console.log('📋 Tabela: Controle Geral');
+            console.log('🔑 Token: pat***');
+            setTimeout(autoConnect, 1000);
         });
         
         // Auto-conectar (chamado ao carregar página)
@@ -629,11 +632,51 @@
                 
             } catch (error) {
                 showMessage(`❌ Erro ao conectar:\n\n${error.message}`, 'error');
-                console.error('Erro detalhado:', error);
+                console.error('❌ Erro detalhado:', error);
+                
+                // Mostrar instruções específicas
+                const errorInstructions = `
+                    <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 20px; border-radius: 10px; margin-top: 20px;">
+                        <h3 style="color: #856404; margin-bottom: 15px;">⚠️ Problemas Detectados</h3>
+                        
+                        <div style="color: #856404; line-height: 1.8;">
+                            <p><strong>Erro 401 (Token Inválido):</strong></p>
+                            <p>Seu Personal Access Token precisa ser reconfigurado:</p>
+                            
+                            <ol style="margin-left: 20px;">
+                                <li><strong>Acesse:</strong> <a href="https://airtable.com/create/tokens" target="_blank">airtable.com/create/tokens</a></li>
+                                <li><strong>Delete o token antigo</strong> chamado "Assistente IA"</li>
+                                <li><strong>Crie um NOVO token</strong> com essas configurações:
+                                    <ul style="margin: 10px 0 10px 20px;">
+                                        <li>✅ Nome: "Pesquisa Web"</li>
+                                        <li>✅ Escopo: <strong>data.records:read</strong></li>
+                                        <li>✅ Acesso: Selecione a base <strong>"Gestão de Contratos"</strong></li>
+                                    </ul>
+                                </li>
+                                <li><strong>Copie o novo token</strong> (começa com "pat...")</li>
+                                <li><strong>Cole abaixo</strong> e clique em "Conectar"</li>
+                            </ol>
+                            
+                            <p style="margin-top: 15px; padding: 10px; background: #f8d7da; border-radius: 5px;">
+                                <strong>⚠️ IMPORTANTE:</strong> O token atual NÃO tem permissão para ler a base "Gestão de Contratos"!
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('messageArea').innerHTML += errorInstructions;
                 
                 // Em caso de erro, mostrar formulário de configuração
                 document.getElementById('configSection').style.display = 'block';
-                document.getElementById('searchSection').style.display = 'none';
+                document.getElementById('searchSection').style.display = 'block';
+                document.getElementById('statusBadge').className = 'status disconnected';
+                document.getElementById('statusBadge').textContent = '🔴 ERRO NA CONEXÃO';
+                
+                // Esconder loading
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
             }
         }
         
