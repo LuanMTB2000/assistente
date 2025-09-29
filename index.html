@@ -550,40 +550,66 @@
             showMessage('🔄 Conectando ao Airtable...', 'info');
             
             try {
-                // Testar conexão - Usando nome da tabela ao invés do ID
-                const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?maxRecords=100`;
-                console.log('URL de conexão:', url);
-                console.log('Tabela:', tableName);
+                // Carregar TODOS os registros usando paginação
+                let allRecordsData = [];
+                let offset = null;
+                let pageCount = 0;
                 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    mode: 'cors'
-                });
-                
-                console.log('Status da resposta:', response.status);
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('Erro da API:', errorData);
+                do {
+                    pageCount++;
+                    console.log(`Carregando página ${pageCount}...`);
                     
-                    let errorMsg = `Erro ${response.status}: ${response.statusText}`;
-                    
-                    if (response.status === 401) {
-                        errorMsg = '🔐 Token inválido ou sem permissões. Verifique:\n• Token está correto?\n• Token tem permissão data.records:read?\n• Base selecionada no token?';
-                    } else if (response.status === 404) {
-                        errorMsg = `❌ Tabela "Controle Geral" não encontrada na base.\n\nVerifique:\n• O nome está exato? (case sensitive)\n• A tabela existe nesta base?\n• Tente listar as tabelas disponíveis no Airtable`;
+                    // Construir URL com offset se existir
+                    let url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?pageSize=100`;
+                    if (offset) {
+                        url += `&offset=${offset}`;
                     }
                     
-                    throw new Error(errorMsg);
-                }
+                    console.log('URL de conexão:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        mode: 'cors'
+                    });
+                    
+                    console.log('Status da resposta:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error('Erro da API:', errorData);
+                        
+                        let errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                        
+                        if (response.status === 401) {
+                            errorMsg = '🔐 Token inválido ou sem permissões. Verifique:\n• Token está correto?\n• Token tem permissão data.records:read?\n• Base selecionada no token?';
+                        } else if (response.status === 404) {
+                            errorMsg = `❌ Tabela "Controle Geral" não encontrada na base.\n\nVerifique:\n• O nome está exato? (case sensitive)\n• A tabela existe nesta base?\n• Tente listar as tabelas disponíveis no Airtable`;
+                        }
+                        
+                        throw new Error(errorMsg);
+                    }
+                    
+                    const data = await response.json();
+                    console.log(`Página ${pageCount} - Registros:`, data.records?.length || 0);
+                    
+                    // Adicionar registros desta página
+                    if (data.records && data.records.length > 0) {
+                        allRecordsData = allRecordsData.concat(data.records);
+                    }
+                    
+                    // Verificar se há mais páginas
+                    offset = data.offset || null;
+                    
+                    // Atualizar progresso na tela
+                    showMessage(`📥 Carregando... ${allRecordsData.length} registros carregados (Página ${pageCount})`, 'info');
+                    
+                } while (offset); // Continuar enquanto houver offset (mais páginas)
                 
-                const data = await response.json();
-                console.log('Dados recebidos:', data);
-                console.log('Total de registros:', data.records?.length || 0);
+                console.log('Total de registros carregados:', allRecordsData.length);
                 
                 // Salvar configuração
                 config = {
