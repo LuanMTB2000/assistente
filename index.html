@@ -403,7 +403,7 @@
             <p>Conecte-se ao Airtable e busque seus dados instantaneamente</p>
         </div>
         
-        <div class="config-section" id="configSection">
+        <div class="config-section" id="configSection" style="display: none;">
             <div class="status disconnected" id="statusBadge">🔴 DESCONECTADO</div>
             
             <div id="configForm">
@@ -448,8 +448,13 @@
             </div>
         </div>
         
-        <div class="search-section" id="searchSection" style="display: none;">
-            <div id="messageArea"></div>
+        <div class="search-section" id="searchSection">
+            <div style="background: #d4edda; border: 2px solid #28a745; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+                <h3 style="color: #155724; margin-bottom: 10px;">🟢 Conexão Automática Ativada</h3>
+                <p style="color: #155724; font-size: 14px;">
+                    Este sistema está pré-configurado e conectará automaticamente à sua base do Airtable ao carregar.
+                </p>
+            </div>
             
             <div class="stats" id="stats" style="display: none;">
                 <div class="stat-card">
@@ -480,15 +485,34 @@
     <script>
         // Variáveis globais
         let config = {
-            apiKey: null,
-            baseId: null,
-            tableName: null,
+            apiKey: 'patCY3Zj2IpIo8eqV.20f046ab1ff9c3feec69bc1e95c8fbea06e058a42f4d0b9bc9eb94a9e8c8f26d',
+            baseId: 'app3ycinowEosnnnq',
+            tableName: 'tblVb3s9RFwUiJ5aq',
             connected: false
         };
         
         let allRecords = [];
         let allFields = [];
         let selectedField = 'all';
+        
+        // Auto-conectar ao carregar a página
+        window.addEventListener('load', () => {
+            console.log('Iniciando conexão automática...');
+            autoConnect();
+        });
+        
+        // Auto-conectar (chamado ao carregar página)
+        async function autoConnect() {
+            showMessage('🔄 Conectando automaticamente ao Airtable...', 'info');
+            
+            // Preencher campos com dados salvos
+            document.getElementById('apiKey').value = config.apiKey;
+            document.getElementById('baseId').value = config.baseId;
+            document.getElementById('tableName').value = config.tableName;
+            
+            // Executar conexão
+            await connect();
+        }
         
         // Conectar ao Airtable
         async function connect() {
@@ -553,15 +577,7 @@
                 }
                 
                 // Atualizar UI
-                document.getElementById('configSection').classList.add('connected');
-                document.getElementById('statusBadge').className = 'status connected';
-                document.getElementById('statusBadge').textContent = '🟢 CONECTADO';
-                
-                document.getElementById('configForm').style.display = 'none';
-                document.getElementById('connectedInfo').style.display = 'block';
-                document.getElementById('connectedBase').textContent = baseId;
-                document.getElementById('connectedTable').textContent = tableName;
-                
+                document.getElementById('configSection').style.display = 'none';
                 document.getElementById('searchSection').style.display = 'block';
                 
                 showMessage(`✅ Conectado com sucesso! ${allRecords.length} registros carregados.`, 'success');
@@ -579,34 +595,18 @@
             } catch (error) {
                 showMessage(`❌ Erro ao conectar:\n\n${error.message}`, 'error');
                 console.error('Erro detalhado:', error);
+                
+                // Em caso de erro, mostrar formulário de configuração
+                document.getElementById('configSection').style.display = 'block';
+                document.getElementById('searchSection').style.display = 'none';
             }
         }
         
         // Desconectar
         function disconnect() {
-            config = {
-                apiKey: null,
-                baseId: null,
-                tableName: null,
-                connected: false
-            };
-            
-            allRecords = [];
-            allFields = [];
-            
-            document.getElementById('configSection').classList.remove('connected');
-            document.getElementById('statusBadge').className = 'status disconnected';
-            document.getElementById('statusBadge').textContent = '🔴 DESCONECTADO';
-            
-            document.getElementById('configForm').style.display = 'block';
-            document.getElementById('connectedInfo').style.display = 'none';
-            document.getElementById('searchSection').style.display = 'none';
-            
-            document.getElementById('apiKey').value = '';
-            document.getElementById('baseId').value = '';
-            document.getElementById('tableName').value = '';
-            
-            showMessage('🔌 Desconectado do Airtable', 'info');
+            if (confirm('⚠️ Tem certeza que deseja desconectar? Você perderá os dados carregados.')) {
+                location.reload();
+            }
         }
         
         // Pesquisar registros em tempo real
