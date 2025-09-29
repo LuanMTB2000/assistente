@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa Airtable - Tempo Real</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .config-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .config-section.connected {
+            background: #d4edda;
+            border-bottom: 2px solid #28a745;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.connected {
+            background: #28a745;
+            color: white;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group small {
+            display: block;
+            color: #666;
+            margin-top: 5px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .form-group small a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .form-group small a:hover {
+            text-decoration: underline;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .info-box strong {
+            display: block;
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        .info-box ol {
+            margin: 10px 0 0 20px;
+            line-height: 1.8;
+            color: #856404;
+        }
+        
+        .info-box a {
+            color: #667eea;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        
+        .info-box a:hover {
+            text-decoration: underline;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.disconnect {
+            background: #dc3545;
+            margin-left: 10px;
+        }
+        
+        .search-section {
+            padding: 30px;
+        }
+        
+        .search-box {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 50px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 20px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .results {
+            margin-top: 20px;
+        }
+        
+        .result-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        
+        .result-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .result-card .field {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .result-card .field:last-child {
+            border-bottom: none;
+        }
+        
+        .result-card .field-name {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .result-card .field-value {
+            color: #333;
+            text-align: right;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state img {
+            width: 150px;
+            opacity: 0.5;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .badge.primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .badge.success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge.warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .stats {
+                flex-direction: column;
+            }
+            
+            .filters {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Pesquisa em Tempo Real</h1>
+            <p>Conecte-se ao Airtable e busque seus dados instantaneamente</p>
+        </div>
+        
+        <div class="config-section" id="configSection">
+            <div class="status disconnected" id="statusBadge">🔴 DESCONECTADO</div>
+            
+            <div id="configForm">
+                <div class="form-group">
+                    <label>🔑 Personal Access Token</label>
+                    <input type="password" id="apiKey" placeholder="pat...">
+                    <small>⚠️ Use Personal Access Token (não API Key antiga!)<br>
+                    Acesse: <a href="https://airtable.com/create/tokens" target="_blank">airtable.com/create/tokens</a></small>
+                </div>
+                
+                <div class="form-group">
+                    <label>🏗️ Base ID</label>
+                    <input type="text" id="baseId" placeholder="appABC123...">
+                    <small>Encontre na URL: airtable.com/<strong>appABC123...</strong>/...</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>📋 Nome da Tabela</label>
+                    <input type="text" id="tableName" placeholder="Ex: Clientes">
+                    <small>O nome exato como aparece no Airtable (case sensitive)</small>
+                </div>
+                
+                <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <strong>💡 Como criar seu Personal Access Token:</strong>
+                    <ol style="margin: 10px 0 0 20px; line-height: 1.8;">
+                        <li>Acesse: <a href="https://airtable.com/create/tokens" target="_blank" style="color: #667eea;">airtable.com/create/tokens</a></li>
+                        <li>Clique em "Create new token"</li>
+                        <li>Dê um nome (ex: "Pesquisa Web")</li>
+                        <li>Adicione os escopos: <strong>data.records:read</strong></li>
+                        <li>Selecione a(s) base(s) que deseja acessar</li>
+                        <li>Copie o token (começa com "pat...")</li>
+                    </ol>
+                </div>
+                
+                <button class="btn" onclick="connect()">Conectar ao Airtable</button>
+            </div>
+            
+            <div id="connectedInfo" style="display: none;">
+                <p><strong>✅ Conectado à base:</strong> <span id="connectedBase"></span></p>
+                <p><strong>📋 Tabela:</strong> <span id="connectedTable"></span></p>
+                <button class="btn disconnect" onclick="disconnect()">Desconectar</button>
+            </div>
+        </div>
+        
+        <div class="search-section" id="searchSection" style="display: none;">
+            <div id="messageArea"></div>
+            
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="number" id="totalRecords">0</div>
+                    <div class="label">Total de Registros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="foundRecords">0</div>
+                    <div class="label">Encontrados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="fieldsCount">0</div>
+                    <div class="label">Campos</div>
+                </div>
+            </div>
+            
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Digite para pesquisar..." oninput="searchRecords()">
+                <span class="search-icon">🔍</span>
+            </div>
+            
+            <div class="filters" id="filterButtons"></div>
+            
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Variáveis globais
+        let config = {
+            apiKey: null,
+            baseId: null,
+            tableName: null,
+            connected: false
+        };
+        
+        let allRecords = [];
+        let allFields = [];
+        let selectedField = 'all';
+        
+        // Conectar ao Airtable
+        async function connect() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const baseId = document.getElementById('baseId').value.trim();
+            const tableName = document.getElementById('tableName').value.trim();
+            
+            // Validações
+            if (!apiKey || !baseId || !tableName) {
+                showMessage('❌ Preencha todos os campos!', 'error');
+                return;
+            }
+            
+            if (!apiKey.startsWith('pat')) {
+                showMessage('⚠️ O Personal Access Token deve começar com "pat". Certifique-se de estar usando o novo formato de token!', 'error');
+                return;
+            }
+            
+            if (!baseId.startsWith('app')) {
+                showMessage('⚠️ O Base ID deve começar com "app". Verifique a URL da sua base!', 'error');
+                return;
+            }
+            
+            showMessage('🔄 Conectando ao Airtable...', 'info');
+            
+            try {
+                // Testar conexão
+                const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?maxRecords=100`;
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    let errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                    
+                    if (response.status === 401) {
+                        errorMsg = '🔐 Token inválido ou sem permissões. Verifique:\n• Token está correto?\n• Token tem permissão data.records:read?\n• Base selecionada no token?';
+                    } else if (response.status === 404) {
+                        errorMsg = '❌ Base ou Tabela não encontrada. Verifique:\n• Base ID está correto?\n• Nome da tabela está exato (case sensitive)?';
+                    }
+                    
+                    throw new Error(errorMsg);
+                }
+                
+                const data = await response.json();
+                
+                // Salvar configuração
+                config = {
+                    apiKey: apiKey,
+                    baseId: baseId,
+                    tableName: tableName,
+                    connected: true
+                };
+                
+                // Processar dados
+                allRecords = data.records;
+                if (allRecords.length > 0) {
+                    allFields = Object.keys(allRecords[0].fields);
+                }
+                
+                // Atualizar UI
+                document.getElementById('configSection').classList.add('connected');
+                document.getElementById('statusBadge').className = 'status connected';
+                document.getElementById('statusBadge').textContent = '🟢 CONECTADO';
+                
+                document.getElementById('configForm').style.display = 'none';
+                document.getElementById('connectedInfo').style.display = 'block';
+                document.getElementById('connectedBase').textContent = baseId;
+                document.getElementById('connectedTable').textContent = tableName;
+                
+                document.getElementById('searchSection').style.display = 'block';
+                
+                showMessage(`✅ Conectado com sucesso! ${allRecords.length} registros carregados.`, 'success');
+                
+                // Mostrar estatísticas
+                updateStats();
+                createFilterButtons();
+                displayResults(allRecords);
+                
+                // Focus no campo de busca
+                setTimeout(() => {
+                    document.getElementById('searchInput').focus();
+                }, 500);
+                
+            } catch (error) {
+                showMessage(`❌ Erro ao conectar:\n\n${error.message}`, 'error');
+                console.error('Erro detalhado:', error);
+            }
+        }
+        
+        // Desconectar
+        function disconnect() {
+            config = {
+                apiKey: null,
+                baseId: null,
+                tableName: null,
+                connected: false
+            };
+            
+            allRecords = [];
+            allFields = [];
+            
+            document.getElementById('configSection').classList.remove('connected');
+            document.getElementById('statusBadge').className = 'status disconnected';
+            document.getElementById('statusBadge').textContent = '🔴 DESCONECTADO';
+            
+            document.getElementById('configForm').style.display = 'block';
+            document.getElementById('connectedInfo').style.display = 'none';
+            document.getElementById('searchSection').style.display = 'none';
+            
+            document.getElementById('apiKey').value = '';
+            document.getElementById('baseId').value = '';
+            document.getElementById('tableName').value = '';
+            
+            showMessage('🔌 Desconectado do Airtable', 'info');
+        }
+        
+        // Pesquisar registros em tempo real
+        function searchRecords() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            
+            if (!query) {
+                displayResults(allRecords);
+                updateStats(allRecords.length);
+                return;
+            }
+            
+            const filtered = allRecords.filter(record => {
+                if (selectedField === 'all') {
+                    // Buscar em todos os campos
+                    return Object.values(record.fields).some(value => 
+                        String(value).toLowerCase().includes(query)
+                    );
+                } else {
+                    // Buscar em campo específico
+                    const value = record.fields[selectedField];
+                    return value && String(value).toLowerCase().includes(query);
+                }
+            });
+            
+            displayResults(filtered);
+            updateStats(filtered.length);
+        }
+        
+        // Criar botões de filtro por campo
+        function createFilterButtons() {
+            const container = document.getElementById('filterButtons');
+            container.innerHTML = '';
+            
+            // Botão "Todos os campos"
+            const allBtn = document.createElement('button');
+            allBtn.className = 'filter-btn active';
+            allBtn.textContent = '📋 Todos os campos';
+            allBtn.onclick = () => selectFilter('all', allBtn);
+            container.appendChild(allBtn);
+            
+            // Botão para cada campo
+            allFields.forEach(field => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.textContent = field;
+                btn.onclick = () => selectFilter(field, btn);
+                container.appendChild(btn);
+            });
+        }
+        
+        // Selecionar filtro
+        function selectFilter(field, button) {
+            selectedField = field;
+            
+            // Atualizar botões ativos
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+            
+            // Refazer busca
+            searchRecords();
+        }
+        
+        // Exibir resultados
+        function displayResults(records) {
+            const container = document.getElementById('results');
+            
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 60px; margin-bottom: 20px;">🔍</div>
+                        <h3>Nenhum resultado encontrado</h3>
+                        <p>Tente ajustar sua pesquisa ou filtros</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = records.map(record => {
+                const fields = Object.entries(record.fields)
+                    .map(([key, value]) => `
+                        <div class="field">
+                            <span class="field-name">${key}:</span>
+                            <span class="field-value">${formatValue(value)}</span>
+                        </div>
+                    `).join('');
+                
+                const firstField = Object.values(record.fields)[0];
+                
+                return `
+                    <div class="result-card" onclick="viewRecord('${record.id}')">
+                        <h3>
+                            ${firstField || 'Sem título'}
+                            <span class="badge primary">ID: ${record.id.slice(0, 8)}...</span>
+                        </h3>
+                        ${fields}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Formatar valores
+        function formatValue(value) {
+            if (Array.isArray(value)) {
+                return value.join(', ');
+            }
+            if (typeof value === 'object' && value !== null) {
+                return JSON.stringify(value);
+            }
+            if (typeof value === 'boolean') {
+                return value ? '✅ Sim' : '❌ Não';
+            }
+            return value;
+        }
+        
+        // Ver registro específico
+        function viewRecord(recordId) {
+            const record = allRecords.find(r => r.id === recordId);
+            if (record) {
+                alert(`Registro: ${recordId}\n\n${JSON.stringify(record.fields, null, 2)}`);
+            }
+        }
+        
+        // Atualizar estatísticas
+        function updateStats(foundCount = null) {
+            document.getElementById('stats').style.display = 'flex';
+            document.getElementById('totalRecords').textContent = allRecords.length;
+            document.getElementById('foundRecords').textContent = foundCount !== null ? foundCount : allRecords.length;
+            document.getElementById('fieldsCount').textContent = allFields.length;
+        }
+        
+        // Mostrar mensagens
+        function showMessage(text, type = 'info') {
+            const container = document.getElementById('messageArea');
+            const className = type === 'error' ? 'error-message' : type === 'success' ? 'success-message' : 'info-message';
+            
+            container.innerHTML = `<div class="${className}">${text}</div>`;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Auto-focus no campo de pesquisa quando conectado
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('App de pesquisa Airtable carregado!');
+        });
+    </script>
+</body>
+</html>
