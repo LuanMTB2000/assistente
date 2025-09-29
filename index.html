@@ -452,9 +452,16 @@
             <div style="background: #d4edda; border: 2px solid #28a745; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
                 <h3 style="color: #155724; margin-bottom: 10px;">🟢 Conexão Automática Ativada</h3>
                 <p style="color: #155724; font-size: 14px;">
-                    Este sistema está pré-configurado e conectará automaticamente à sua base do Airtable ao carregar.
+                    Conectando automaticamente à tabela <strong>"Controle Geral"</strong>...<br>
+                    Base: app3ycinowEosnnnq
                 </p>
+                <div id="loadingIndicator" style="margin-top: 15px;">
+                    <div class="spinner"></div>
+                    <p style="color: #155724;">Aguarde enquanto carregamos seus dados...</p>
+                </div>
             </div>
+            
+            <div id="messageArea"></div>
             
             <div class="stats" id="stats" style="display: none;">
                 <div class="stat-card">
@@ -487,7 +494,7 @@
         let config = {
             apiKey: 'patCY3Zj2IpIo8eqV.20f046ab1ff9c3feec69bc1e95c8fbea06e058a42f4d0b9bc9eb94a9e8c8f26d',
             baseId: 'app3ycinowEosnnnq',
-            tableName: 'tblVb3s9RFwUiJ5aq',
+            tableName: 'Controle Geral',
             connected: false
         };
         
@@ -498,12 +505,13 @@
         // Auto-conectar ao carregar a página
         window.addEventListener('load', () => {
             console.log('Iniciando conexão automática...');
-            autoConnect();
+            setTimeout(autoConnect, 500);
         });
         
         // Auto-conectar (chamado ao carregar página)
         async function autoConnect() {
-            showMessage('🔄 Conectando automaticamente ao Airtable...', 'info');
+            console.log('Conectando à tabela: Controle Geral');
+            showMessage('🔄 Conectando automaticamente à tabela "Controle Geral"...', 'info');
             
             // Preencher campos com dados salvos
             document.getElementById('apiKey').value = config.apiKey;
@@ -539,8 +547,11 @@
             showMessage('🔄 Conectando ao Airtable...', 'info');
             
             try {
-                // Testar conexão
+                // Testar conexão - Usando nome da tabela ao invés do ID
                 const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}?maxRecords=100`;
+                console.log('URL de conexão:', url);
+                console.log('Tabela:', tableName);
+                
                 const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
@@ -548,19 +559,26 @@
                     }
                 });
                 
+                console.log('Status da resposta:', response.status);
+                
                 if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Erro da API:', errorData);
+                    
                     let errorMsg = `Erro ${response.status}: ${response.statusText}`;
                     
                     if (response.status === 401) {
                         errorMsg = '🔐 Token inválido ou sem permissões. Verifique:\n• Token está correto?\n• Token tem permissão data.records:read?\n• Base selecionada no token?';
                     } else if (response.status === 404) {
-                        errorMsg = '❌ Base ou Tabela não encontrada. Verifique:\n• Base ID está correto?\n• Nome da tabela está exato (case sensitive)?';
+                        errorMsg = `❌ Tabela "Controle Geral" não encontrada na base.\n\nVerifique:\n• O nome está exato? (case sensitive)\n• A tabela existe nesta base?\n• Tente listar as tabelas disponíveis no Airtable`;
                     }
                     
                     throw new Error(errorMsg);
                 }
                 
                 const data = await response.json();
+                console.log('Dados recebidos:', data);
+                console.log('Total de registros:', data.records?.length || 0);
                 
                 // Salvar configuração
                 config = {
@@ -571,21 +589,38 @@
                 };
                 
                 // Processar dados
-                allRecords = data.records;
+                allRecords = data.records || [];
+                
+                console.log('Registros carregados:', allRecords.length);
+                
                 if (allRecords.length > 0) {
                     allFields = Object.keys(allRecords[0].fields);
+                    console.log('Campos encontrados:', allFields);
+                } else {
+                    console.warn('⚠️ Nenhum registro encontrado na tabela!');
+                    allFields = [];
                 }
                 
                 // Atualizar UI
                 document.getElementById('configSection').style.display = 'none';
                 document.getElementById('searchSection').style.display = 'block';
                 
-                showMessage(`✅ Conectado com sucesso! ${allRecords.length} registros carregados.`, 'success');
+                if (allRecords.length === 0) {
+                    showMessage(`⚠️ Conectado, mas nenhum registro foi encontrado na tabela "Controle Geral".\n\nA tabela pode estar vazia ou você precisa adicionar registros no Airtable.`, 'error');
+                } else {
+                    showMessage(`✅ Conectado com sucesso à "Controle Geral"! ${allRecords.length} registros carregados.`, 'success');
+                }
                 
                 // Mostrar estatísticas
                 updateStats();
                 createFilterButtons();
                 displayResults(allRecords);
+                
+                // Esconder loading indicator
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
                 
                 // Focus no campo de busca
                 setTimeout(() => {
