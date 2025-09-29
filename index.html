@@ -554,9 +554,16 @@
                 let allRecordsData = [];
                 let offset = null;
                 let pageCount = 0;
+                const maxPages = 50; // Limite de segurança para evitar loops infinitos
                 
                 do {
                     pageCount++;
+                    
+                    if (pageCount > maxPages) {
+                        console.warn('Limite de páginas atingido. Parando carregamento.');
+                        break;
+                    }
+                    
                     console.log(`Carregando página ${pageCount}...`);
                     
                     // Construir URL com offset se existir
@@ -565,51 +572,70 @@
                         url += `&offset=${offset}`;
                     }
                     
-                    console.log('URL de conexão:', url);
-                    
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        mode: 'cors'
-                    });
-                    
-                    console.log('Status da resposta:', response.status);
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        console.error('Erro da API:', errorData);
+                    try {
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${apiKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            mode: 'cors'
+                        });
                         
-                        let errorMsg = `Erro ${response.status}: ${response.statusText}`;
-                        
-                        if (response.status === 401) {
-                            errorMsg = '🔐 Token inválido ou sem permissões. Verifique:\n• Token está correto?\n• Token tem permissão data.records:read?\n• Base selecionada no token?';
-                        } else if (response.status === 404) {
-                            errorMsg = `❌ Tabela "Controle Geral" não encontrada na base.\n\nVerifique:\n• O nome está exato? (case sensitive)\n• A tabela existe nesta base?\n• Tente listar as tabelas disponíveis no Airtable`;
+                        if (!response.ok) {
+                            console.error(`Erro na página ${pageCount}:`, response.status);
+                            
+                            // Se já carregou algum registro, continua com o que tem
+                            if (allRecordsData.length > 0) {
+                                console.log(`Parando no erro. Total carregado: ${allRecordsData.length}`);
+                                break;
+                            }
+                            
+                            let errorMsg = `Erro ${response.status}: ${response.statusText}`;
+                            if (response.status === 401) {
+                                errorMsg = 'Token inválido ou expirado. Crie um novo token.';
+                            } else if (response.status === 404) {
+                                errorMsg = 'Tabela "Controle Geral" não encontrada.';
+                            } else if (response.status === 429) {
+                                errorMsg = 'Limite de requisições atingido. Aguarde alguns segundos e tente novamente.';
+                            }
+                            throw new Error(errorMsg);
                         }
                         
-                        throw new Error(errorMsg);
+                        const data = await response.json();
+                        console.log(`Página ${pageCount} - ${data.records?.length || 0} registros`);
+                        
+                        // Adicionar registros desta página
+                        if (data.records && data.records.length > 0) {
+                            allRecordsData = allRecordsData.concat(data.records);
+                        }
+                        
+                        // Verificar se há mais páginas
+                        offset = data.offset || null;
+                        
+                        // Atualizar progresso
+                        showMessage(`Carregando... ${allRecordsData.length} registros (Página ${pageCount}/${offset ? '...' : pageCount})`, 'info');
+                        
+                        // Delay de 300ms entre requisições para evitar rate limit
+                        if (offset) {
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                        
+                    } catch (fetchError) {
+                        console.error(`Erro ao buscar página ${pageCount}:`, fetchError);
+                        
+                        // Se já tem dados, para aqui
+                        if (allRecordsData.length > 0) {
+                            console.log(`Parando após erro. Total: ${allRecordsData.length} registros`);
+                            break;
+                        }
+                        
+                        throw fetchError;
                     }
                     
-                    const data = await response.json();
-                    console.log(`Página ${pageCount} - Registros:`, data.records?.length || 0);
-                    
-                    // Adicionar registros desta página
-                    if (data.records && data.records.length > 0) {
-                        allRecordsData = allRecordsData.concat(data.records);
-                    }
-                    
-                    // Verificar se há mais páginas
-                    offset = data.offset || null;
-                    
-                    // Atualizar progresso na tela
-                    showMessage(`📥 Carregando... ${allRecordsData.length} registros carregados (Página ${pageCount})`, 'info');
-                    
-                } while (offset); // Continuar enquanto houver offset (mais páginas)
+                } while (offset);
                 
-                console.log('Total de registros carregados:', allRecordsData.length);
+                console.log(`Carregamento concluído! Total: ${allRecordsData.length} registros em ${pageCount} páginas`);
                 
                 // Salvar configuração
                 config = {
@@ -620,9 +646,9 @@
                 };
                 
                 // Processar dados
-                allRecords = data.records || [];
+                allRecords = allRecordsData || [];
                 
-                console.log('Registros carregados:', allRecords.length);
+                console.log('Total final de registros carregados:', allRecords.length);
                 
                 if (allRecords.length > 0) {
                     allFields = Object.keys(allRecords[0].fields);
@@ -636,10 +662,10 @@
                 document.getElementById('configSection').style.display = 'none';
                 document.getElementById('searchSection').style.display = 'block';
                 
-                if (allRecords.length === 0) {
+                if (allRecordsData.length === 0) {
                     showMessage(`⚠️ Conectado, mas nenhum registro foi encontrado na tabela "Controle Geral".\n\nA tabela pode estar vazia ou você precisa adicionar registros no Airtable.`, 'error');
                 } else {
-                    showMessage(`✅ Conectado com sucesso à "Controle Geral"! ${allRecords.length} registros carregados.`, 'success');
+                    showMessage(`✅ Conectado com sucesso! ${allRecordsData.length} registros carregados em ${pageCount} página${pageCount > 1 ? 's' : ''}.`, 'success');
                 }
                 
                 // Mostrar estatísticas
